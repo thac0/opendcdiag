@@ -95,21 +95,21 @@ default_c_flags = []
 default_cpp_flags = []
 
 foreach ccflag : [
-    '-fstack-clash-protection',
-    '-fstack-protector-strong',
-    '-fcf-protection=full',
-    '-mcet-switch',
-]
+        '-fstack-clash-protection',
+        '-fstack-protector-strong',
+        '-fcf-protection=full',
+        '-mcet-switch',
+    ]
     if cc.has_argument(ccflag)
         add_project_arguments(ccflag, language: [ 'c', 'cpp' ])
     endif
 endforeach
 
 foreach lflag : [
-    '-Wl,-z,relro',
-    '-Wl,-z,noexecstack',
-    '-pie',
-]
+        '-Wl,-z,relro',
+        '-Wl,-z,noexecstack',
+        '-pie',
+    ]
     if cc.links(
        'int main() { return 0; }',
        args: [ lflag ],
