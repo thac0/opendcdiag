@@ -34,6 +34,7 @@ march_base = get_option('march_base')
 if march_base != ''
     march_flags += '-march=' + march_base
 endif
+
 if host_machine.cpu_family() == 'x86_64'
     if march_base == ''
         march_base='haswell'
@@ -198,6 +199,7 @@ default_c_warn = [
     '-Wno-unused-parameter',
     '-Wno-sign-compare',
 ]
+
 if cc.has_argument('-Werror=discarded-qualifiers')
     default_c_warn += '-Werror=discarded-qualifiers'
 endif

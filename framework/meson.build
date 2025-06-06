@@ -34,25 +34,25 @@ generated_cpu_features_h = configure_file(
 )
 
 if meson.current_source_dir() == join_paths(meson.project_source_root(), 'framework')
-  configure_file(
-      input : [
-          'scripts/make-gitid.pl',
-      ],
-      output : 'gitid.h',
-      encoding : 'ascii',
-      command : [
-          perl, '@INPUT0@', '@OUTPUT@', 'opendcdiag', get_option('version_suffix')
-      ],
-  )
+    configure_file(
+        input : [
+            'scripts/make-gitid.pl',
+        ],
+        output : 'gitid.h',
+        encoding : 'ascii',
+        command : [
+            perl, '@INPUT0@', '@OUTPUT@', 'opendcdiag', get_option('version_suffix')
+        ],
+    )
 else
-  message('opendcdiag: not generating gitid.h -- likely included as subdir')
+    message('opendcdiag: not generating gitid.h -- likely included as subdir')
 endif
 
 generated_builtin_test_list = []
 builtin_test_list_inputs = get_option('builtin_test_list')
 generated_builtin_test_list += custom_target(
     'sandstone_test_lists.h',
-    input : [ ],
+    input : [],
     output : [
         'sandstone_test_lists.h',
         'sandstone_test_lists.cpp',
@@ -63,9 +63,9 @@ generated_builtin_test_list += custom_target(
 )
 
 if cc.has_type('_Float16') and cpp.has_type('_Float16')
-        framework_config.set('SANDSTONE_FP16_TYPE', '_Float16')
+    framework_config.set('SANDSTONE_FP16_TYPE', '_Float16')
 elif cc.has_type('__fp16') and cpp.has_type('__fp16')
-        framework_config.set('SANDSTONE_FP16_TYPE', '__fp16')
+    framework_config.set('SANDSTONE_FP16_TYPE', '__fp16')
 endif
 
 framework_config.set10('SANDSTONE_BUILTIN_TEST_LIST', get_option('builtin_test_list') != '')
@@ -87,8 +87,7 @@ else
 endif
 
 framework_config.set10('SANDSTONE_SSL_BUILD', get_option('ssl_link_type') != 'none')
-framework_config.set10('SANDSTONE_SSL_LINKED',
-  get_option('ssl_link_type') == 'static' or get_option('ssl_link_type') == 'dynamic')
+framework_config.set10('SANDSTONE_SSL_LINKED', get_option('ssl_link_type') == 'static' or get_option('ssl_link_type') == 'dynamic')
 
 framework_files = files(
     'Floats.cpp',
@@ -111,23 +110,25 @@ framework_files = files(
 )
 
 if framework_config.get('SANDSTONE_SSL_BUILD') == 1
-  # Look for libcrypto
-  crypto_dep = dependency('libcrypto',
-                        version: '>= 3.0',
-                        required: false,
-                        static: get_option('ssl_link_type') == 'static')
-  if crypto_dep.found()
-      framework_files += ['sandstone_ssl.cpp', 'sandstone_ssl_rand.cpp']
+    # Look for libcrypto
+    crypto_dep = dependency(
+        'libcrypto',
+        version: '>= 3.0',
+        required: false,
+        static: get_option('ssl_link_type') == 'static'
+    )
 
-    if framework_config.get('SANDSTONE_SSL_LINKED') == 0
-        # If we're trying to dlopen() only, we need to be more careful
-        crypto_dep = crypto_dep.partial_dependency(compile_args: true, includes: true,
-                                                   link_args: false, links: false)
+    if crypto_dep.found()
+        framework_files += ['sandstone_ssl.cpp', 'sandstone_ssl_rand.cpp']
+
+        if framework_config.get('SANDSTONE_SSL_LINKED') == 0
+            # If we're trying to dlopen() only, we need to be more careful
+            crypto_dep = crypto_dep.partial_dependency(compile_args: true, includes: true, link_args: false, links: false)
+        endif
+    else
+        # If we cannot find libcrypto, disable SSL build
+        framework_config.set10('SANDSTONE_SSL_BUILD', 0)
     endif
-  else
-      # If we cannot find libcrypto, disable SSL build
-      framework_config.set10('SANDSTONE_SSL_BUILD', 0)
-  endif
 endif
 
 if get_option('selftests')
@@ -145,6 +146,7 @@ if get_option('fuzzing') == true
     if afl_dir != ''
         lookup_dirs += afl_dir
     endif
+
     find_program('afl-fuzz', required: true, dirs: lookup_dirs)
     cc = meson.get_compiler('c')
     afl_header = cc.check_header(
@@ -152,23 +154,26 @@ if get_option('fuzzing') == true
         include_directories: include_directories(lookup_dirs),
         required: true
     )
+
     framework_incdir += include_directories(afl_dir)
 endif
 
 if target_machine.system() != 'windows' and target_machine.system() != 'cygwin'
-framework_files += [
-    'forkfd/forkfd.c',
-]
+    framework_files += [
+        'forkfd/forkfd.c',
+    ]
 endif
+
 if target_machine.system() == 'darwin'
-framework_files += [
-    'sandstone_sections.S',
-]
+    framework_files += [
+        'sandstone_sections.S',
+    ]
 endif
 
 if target_machine.system() != 'windows' and target_machine.system() != 'cygwin'
     subdir('sysdeps/unix')
 endif
+
 subdir(sysdeps_dir)
 
 framework_config_h = configure_file(

@@ -192,5 +192,5 @@ if host_machine.cpu_family() == 'x86_64'
     unittests_sources += files(
         'ifs/unit/ifs_unit_utils.cpp',
         'ifs/unit/ifs_unittests.cpp',
-        )
+    )
 endif
