@@ -7,6 +7,7 @@
 #define SANDSTONE_DATA_H
 
 #include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -39,6 +40,37 @@ enum DataType {
     HFloat8Data,
     BFloat8Data,
 };
+
+/* Shared scalar-type mappings. */
+#if ULONG_MAX == ULLONG_MAX /* LP64 (e.g. Linux, BSD) */
+#   define SANDSTONE_ULONG_TYPE UInt64Data
+#   define SANDSTONE_LONG_TYPE Int64Data
+#else                       /* LLP64 (e.g. Windows) */
+#   define SANDSTONE_ULONG_TYPE UInt32Data
+#   define SANDSTONE_LONG_TYPE Int32Data
+#endif
+
+#define SANDSTONE_SCALAR_TYPES(T) \
+    T(_Bool, UInt8Data) \
+    T(char, UInt8Data) \
+    T(uint8_t, UInt8Data) \
+    T(uint16_t, UInt16Data) \
+    T(uint32_t, UInt32Data) \
+    T(unsigned long, SANDSTONE_ULONG_TYPE) \
+    T(unsigned long long, UInt64Data) \
+    T(__uint128_t, UInt128Data) \
+    T(int8_t, Int8Data) \
+    T(int16_t, Int16Data) \
+    T(int32_t, Int32Data) \
+    T(long, SANDSTONE_LONG_TYPE) \
+    T(long long, Int64Data) \
+    T(__int128_t, Int128Data) \
+    T(HFloat8, HFloat8Data) \
+    T(BFloat8, BFloat8Data) \
+    T(BFloat16, BFloat16Data) \
+    T(Float16, Float16Data) \
+    T(float, Float32Data) \
+    T(double, Float64Data)
 
 #ifdef __SIZEOF_FLOAT128__
 struct Float128
@@ -102,8 +134,6 @@ struct Float128
 #endif // __FLT128_MAX__
 
 #ifdef __cplusplus
-#include <concepts>
-
 
 namespace SandstoneDataDetails {
 enum { MaxDataTypeSize = 16 };
@@ -148,28 +178,17 @@ template <DataType V> struct TypeToDataType_helper : std::true_type
 
 template <typename T> struct TypeToDataType
 { static constexpr bool IsValid = false; };
-template<> struct TypeToDataType<void>  : TypeToDataType_helper<UInt8Data> {};
-template<> struct TypeToDataType<bool>  : TypeToDataType_helper<UInt8Data> {};
-template<> struct TypeToDataType<char>  : TypeToDataType_helper<UInt8Data> {};
-template<> struct TypeToDataType<uint8_t>  : TypeToDataType_helper<UInt8Data> {};
-template<> struct TypeToDataType<uint16_t> : TypeToDataType_helper<UInt16Data> {};
-template<> struct TypeToDataType<uint32_t> : TypeToDataType_helper<UInt32Data> {};
-template<> struct TypeToDataType<uint64_t> : TypeToDataType_helper<UInt64Data> {};
-template<> struct TypeToDataType<__uint128_t> : TypeToDataType_helper<UInt128Data> {};
-template<> struct TypeToDataType<int8_t>  : TypeToDataType_helper<Int8Data> {};
-template<> struct TypeToDataType<int16_t> : TypeToDataType_helper<Int16Data> {};
-template<> struct TypeToDataType<int32_t> : TypeToDataType_helper<Int32Data> {};
-template<> struct TypeToDataType<int64_t> : TypeToDataType_helper<Int64Data> {};
-template<> struct TypeToDataType<__int128_t> : TypeToDataType_helper<Int128Data> {};
 
-template<> struct TypeToDataType<BFloat8> : TypeToDataType_helper<BFloat8Data> {};
-template<> struct TypeToDataType<HFloat8> : TypeToDataType_helper<HFloat8Data> {};
-template<> struct TypeToDataType<Float16> : TypeToDataType_helper<Float16Data> {};
-template<> struct TypeToDataType<BFloat16> : TypeToDataType_helper<BFloat16Data> {};
+/* Generated from the shared list. */
+#define SANDSTONE_DATATYPE_SPECIALIZATION(ctype, tag) \
+    template<> struct TypeToDataType<ctype> : TypeToDataType_helper<tag> {};
+SANDSTONE_SCALAR_TYPES(SANDSTONE_DATATYPE_SPECIALIZATION)
+#undef SANDSTONE_DATATYPE_SPECIALIZATION
+
+/* Exceptions stay handwritten below. */
+template<> struct TypeToDataType<void>  : TypeToDataType_helper<UInt8Data> {};
 template<> struct TypeToDataType<Float32> : TypeToDataType_helper<Float32Data> {};
 template<> struct TypeToDataType<Float64> : TypeToDataType_helper<Float64Data> {};
-template<> struct TypeToDataType<float> : TypeToDataType_helper<Float32Data> {};
-template<> struct TypeToDataType<double> : TypeToDataType_helper<Float64Data> {};
 template<> struct TypeToDataType<long double> :
         TypeToDataType_helper<sizeof(long double) == sizeof(double) ? Float64Data : Float80Data> {};
 #ifdef __SIZEOF_FLOAT128__
@@ -212,27 +231,9 @@ static constexpr size_t type_alignment(DataType type)
 
 #else
 /* for C mode, we'll have to use _Generic */
+#define SANDSTONE_DATATYPE_ASSOC(ctype, tag) ctype: tag,
 #define DATATYPEFORTYPE(X) _Generic((X), \
-        _Bool: UInt8Data, \
-        char: UInt8Data, \
-        uint8_t: UInt8Data, \
-        uint16_t: UInt16Data, \
-        uint32_t: UInt32Data, \
-        unsigned long: (sizeof(unsigned long) == sizeof(unsigned long long) ? UInt64Data : UInt32Data), \
-        unsigned long long: UInt64Data, \
-        __uint128_t: UInt128Data, \
-        int8_t: Int8Data, \
-        int16_t: Int16Data, \
-        int32_t: Int32Data, \
-        long: (sizeof(long) == sizeof(long long) ? Int64Data : Int32Data), \
-        long long: Int64Data, \
-        __int128_t: Int128Data, \
-        HFloat8: HFloat8Data, \
-        BFloat8: BFloat8Data, \
-        BFloat16: BFloat16Data, \
-        Float16: Float16Data, \
-        float: Float32Data, \
-        double: Float64Data, \
+        SANDSTONE_SCALAR_TYPES(SANDSTONE_DATATYPE_ASSOC) \
         long double: (sizeof(long double) == sizeof(double) ? Float64Data : Float80Data) \
     )
 
