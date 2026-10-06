@@ -30,10 +30,15 @@
 #include "test_knobs.h"
 
 #ifdef __cplusplus
+#include <array>
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <span>
+#include <string>
+#include <type_traits>
+#include <vector>
 using std::atomic_int;
 extern "C" {
 #else
@@ -674,6 +679,18 @@ template <typename Callback> void install_failure_callback(Callback cb)
     }
 }
 
+namespace SandstoneCrossCheck {
+
+// range_value_t<T> must itself be trivially copyable, so a container of
+// containers does not satisfy this concept.
+template <typename T>
+concept ContiguousComparable =
+    std::ranges::contiguous_range<T> &&
+    std::ranges::sized_range<T> &&
+    std::is_trivially_copyable_v<std::ranges::range_value_t<T>>;
+
+} // namespace SandstoneCrossCheck
+
 namespace SandstoneMemcmpOrFail {
 using namespace SandstoneDataDetails;
 template <typename Callback> concept FormatterFunction =
@@ -736,6 +753,27 @@ template <ValidDataType T> static inline void
 memcmp_or_fail(const T *actual, const T *expected, size_t count)
 {
     return memcmp_or_fail(actual, expected, count, nullptr);
+}
+
+// Container overload: size mismatch is a hard failure (report_fail_msg);
+// content mismatch falls through to the pointer-based overload above,
+// reinterpreting each container's storage as uint8_t. No DataType tag is
+// involved. Resolves unambiguously against the pointer overloads by partial
+// ordering of constraints (a requires-constrained template is more constrained
+// than an unconstrained one) and by parameter shape (reference vs. pointer +
+// count).
+template <SandstoneCrossCheck::ContiguousComparable T>
+static inline void memcmp_or_fail(const T &actual, const T &expected)
+{
+    using U = std::ranges::range_value_t<T>;
+    size_t n_actual = std::ranges::size(actual);
+    size_t n_expected = std::ranges::size(expected);
+    if (n_actual != n_expected)
+        report_fail_msg("container size mismatch: %zu vs %zu", n_actual, n_expected);
+
+    memcmp_or_fail(reinterpret_cast<const uint8_t *>(std::ranges::data(actual)),
+                   reinterpret_cast<const uint8_t *>(std::ranges::data(expected)),
+                   n_actual * sizeof(U));
 }
 
 /// Checks that the array pointed to by actual (which has count elements of type
