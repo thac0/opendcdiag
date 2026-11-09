@@ -20,6 +20,7 @@
 #include "logging.h"
 
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <map>
 #include <vector>
@@ -585,7 +586,7 @@ static bool wait_delay_between_tests()
 
 static int exec_mode_run(int argc, char **argv)
 {
-    if (argc < 4)
+    if (argc < 5)
         return EX_DATAERR;
 
     auto parse_int = [](const char *arg) {
@@ -606,6 +607,11 @@ static int exec_mode_run(int argc, char **argv)
         return int(n);
     };
     int child_number = parse_int(argv[0]);
+
+    std::string_view iteration = argv[4];
+    auto [end, ec] = std::from_chars(iteration.begin(), iteration.end(), sApp->current_iteration_count);
+    if (ec != std::errc{} || end != iteration.end())
+        return EX_DATAERR;
 
     attach_shmem(parse_int(argv[1]));
 #if SANDSTONE_DEVICE_IDXD
@@ -628,7 +634,7 @@ static int exec_mode_run(int argc, char **argv)
     random_init_global(argv[3]);
     make_rescheduler(sApp->shmem->cfg.reschedule_mode);
 
-    load_test_knob_args({ argv + 4, argv + argc });
+    load_test_knob_args({ argv + 5, argv + argc });
 
     return test_result_to_exit_code(child_run(tests_to_run.at(0), child_number));
 }
