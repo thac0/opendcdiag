@@ -360,6 +360,7 @@ DECLARE_TEST(ifs, "Intel In-Field Scan (IFS) hardware selftest")
     .desired_duration = -1,
     .fracture_loop_count = -1,
     .quality_level = TEST_QUALITY_PROD,
+    .crosscheck = CrossCheckNone,
     .flags = test_schedule_sequential,
 END_DECLARE_TEST
 
@@ -370,6 +371,7 @@ DECLARE_TEST(ifs_array_bist, "Array BIST: Intel In-Field Scan (IFS) hardware sel
     .desired_duration = -1,
     .fracture_loop_count = -1,
     .quality_level = TEST_QUALITY_PROD,
+    .crosscheck = CrossCheckNone,
     .flags = test_schedule_sequential,
 END_DECLARE_TEST
 
@@ -379,6 +381,7 @@ DECLARE_TEST(ifs_sbaf, "SBAF: Intel In-Field Scan (IFS) hardware functional self
     .desired_duration = -1,
     .fracture_loop_count = -1,
     .quality_level = TEST_QUALITY_BETA,
+    .crosscheck = CrossCheckNone,
     .flags = test_schedule_sequential,
 END_DECLARE_TEST
 
