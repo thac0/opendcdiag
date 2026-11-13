@@ -12,17 +12,15 @@
  * decomposition problem on given input matrices, which involve a lot
  * of matrix multiplication operations underneath.
  *
- * The logic comes from the 3rd party library Eigen. The first thread
- * that gets to run computes a "golden value" of the results, those
- * being output matrices "U" and "V". Subsequent runs have results
- * contrasted to those golden values and, whenever they differ, an
- * error is flagged.
+ * The logic comes from the 3rd party library Eigen. Initialization
+ * computes golden output matrices "U" and "V" from captured inputs.
+ * Worker results are compared against those golden matrices and
+ * against each worker's first results on subsequent iterations.
  *
  * This particular version of the Eigen SVD tests go for double
  * precision, complex numbers input matrices and the (divide and
  * conquer) bi-diagonalization SVD algorithm.
  *
- * @note This test requires at least 2 threads to run.
  * @endparblock
  */
 
@@ -40,9 +38,9 @@ DECLARE_TEST(eigen_svd_cdouble, "Eigen SVD (Singular Value Decomposition) solvin
   .groups = DECLARE_TEST_GROUPS(&group_math),
   .test_init = eigen_svd_cdouble_test::init,
   .test_run = eigen_svd_cdouble_test::run,
-  .test_cleanup = eigen_svd_cdouble_test::cleanup,
   .minimum_cpu = cpu_skylake_avx512, // just because (Eigen supports
                                      // that anyway)
   .fracture_loop_count = 5,
   .quality_level = TEST_QUALITY_PROD,
+  .crosscheck = CrossCheckGolden,
 END_DECLARE_TEST
